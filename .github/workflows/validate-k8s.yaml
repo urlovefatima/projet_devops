@@ -14,14 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.30.0'
+
       - name: Build manifests with Kustomize
         run: kubectl kustomize k8s/overlays/dev > rendered.yaml
 
       - name: Show rendered manifests
         run: cat rendered.yaml
 
-      - name: Validate YAML syntax (dry-run, client-side)
-        run: kubectl apply --dry-run=client -f rendered.yaml
+      - name: Validate YAML syntax (client-side only, no cluster available here)
+        run: kubectl apply --dry-run=client --validate=false -f rendered.yaml
 
   deploy:
     needs: validate
@@ -29,6 +34,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.30.0'
 
       - name: Create kind cluster
         uses: helm/kind-action@v1

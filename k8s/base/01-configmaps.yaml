@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ollama-config
+  namespace: llm-app
+data:
+  OLLAMA_HOST: "0.0.0.0:11434"
+  OLLAMA_KEEP_ALIVE: "5m"
+  OLLAMA_MAX_LOADED_MODELS: "1"
+  OLLAMA_NUM_PARALLEL: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openwebui-config
+  namespace: llm-app
+data:
+  OLLAMA_BASE_URL: "http://ollama:11434"

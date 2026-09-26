@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - 01-configmaps.yaml
+  - 02-ollama-pvc.yaml
+  - 03-openwebui-pvc.yaml
+  - 04-ollama-deployment.yaml
+  - 05-openwebui-deployment.yaml
+  - 06-ollama-service.yaml
+  - 07-openwebui-service.yaml
+  - 08-ingress.yaml
+  - 09-hpa.yaml

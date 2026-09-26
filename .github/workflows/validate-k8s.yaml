@@ -1,0 +1,48 @@
+name: Validate Kubernetes manifests
+
+on:
+  push:
+    paths:
+      - 'k8s/**'
+      - '.github/workflows/validate-k8s.yaml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build manifests with Kustomize
+        run: kubectl kustomize k8s/overlays/dev > rendered.yaml
+
+      - name: Show rendered manifests
+        run: cat rendered.yaml
+
+      - name: Validate YAML syntax (dry-run, client-side)
+        run: kubectl apply --dry-run=client -f rendered.yaml
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+
+      - name: Deploy to kind (dev overlay)
+        run: kubectl apply -k k8s/overlays/dev
+
+      - name: Wait for Ollama rollout
+        run: kubectl rollout status deployment/ollama -n llm-app --timeout=120s
+
+      - name: Wait for Open WebUI rollout
+        run: kubectl rollout status deployment/open-webui -n llm-app --timeout=120s
+
+      - name: Show final state
+        run: |
+          kubectl get pods -n llm-app
+          kubectl get svc -n llm-app

@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-provider
+  namespace: monitoring
+data:
+  provider.yaml: |
+    apiVersion: 1
+    providers:
+      - name: default
+        folder: ""
+        type: file
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-llm-app
+  namespace: monitoring
+data:
+  llm-app.json: |
+    {
+      "title": "LLM DevOps - Ollama & Open WebUI",
+      "uid": "llm-app-dashboard",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": { "from": "now-15m", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "title": "CPU Usage by Pod (llm-app namespace)",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"llm-app\"}[1m])) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Memory Usage by Pod (llm-app namespace)",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(container_memory_working_set_bytes{namespace=\"llm-app\"}) by (pod)",
+              "legendFormat": "{{pod}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Targets Up (1 = healthy)",
+          "type": "stat",
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 9 },
+          "targets": [
+            {
+              "expr": "up",
+              "legendFormat": "{{job}} ({{instance}})",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }

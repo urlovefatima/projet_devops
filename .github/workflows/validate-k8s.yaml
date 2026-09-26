@@ -103,3 +103,63 @@ jobs:
       - name: Clean up load generator
         if: always()
         run: kubectl delete pod loadgen -n llm-app --ignore-not-found
+
+      - name: Deploy monitoring stack (Prometheus + Grafana)
+        run: kubectl apply -f k8s/monitoring/
+
+      - name: Wait for Prometheus and Grafana rollout
+        run: |
+          kubectl rollout status deployment/prometheus -n monitoring --timeout=180s
+          kubectl rollout status deployment/grafana -n monitoring --timeout=180s
+
+      - name: Diagnose monitoring stack on failure
+        if: failure()
+        run: |
+          kubectl get pods -n monitoring -o wide
+          kubectl describe pod -n monitoring -l app=prometheus
+          kubectl describe pod -n monitoring -l app=grafana
+          kubectl logs -n monitoring -l app=prometheus --tail=100
+          kubectl logs -n monitoring -l app=grafana --tail=100
+
+      - name: Verify Prometheus targets and query real metrics
+        run: |
+          kubectl -n monitoring port-forward svc/prometheus 9090:9090 &
+          sleep 8
+
+          echo "--- Waiting for at least 2 healthy targets ---"
+          for i in $(seq 1 12); do
+            UP=$(curl -s http://localhost:9090/api/v1/targets | grep -o '"health":"up"' | wc -l)
+            echo "Healthy targets so far: $UP"
+            if [ "$UP" -ge 2 ]; then break; fi
+            sleep 10
+          done
+
+          echo "=== Prometheus targets (raw JSON) ==="
+          curl -s http://localhost:9090/api/v1/targets | python3 -m json.tool
+
+          echo "=== Sample PromQL query: CPU usage by pod in llm-app namespace ==="
+          curl -s 'http://localhost:9090/api/v1/query?query=sum(rate(container_cpu_usage_seconds_total%7Bnamespace%3D%22llm-app%22%7D%5B1m%5D))%20by%20(pod)' | python3 -m json.tool
+
+          echo "=== Sample PromQL query: memory usage by pod in llm-app namespace ==="
+          curl -s 'http://localhost:9090/api/v1/query?query=sum(container_memory_working_set_bytes%7Bnamespace%3D%22llm-app%22%7D)%20by%20(pod)' | python3 -m json.tool
+
+      - name: Install Playwright
+        run: |
+          npm install playwright
+          npx playwright install --with-deps chromium
+
+      - name: Screenshot Grafana dashboard
+        run: |
+          kubectl -n monitoring port-forward svc/grafana 3000:3000 &
+          sleep 8
+          node .github/scripts/grafana-screenshot.js
+
+      - name: Upload Grafana screenshot as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grafana-dashboard-screenshot
+          path: |
+            grafana-dashboard.png
+            grafana-debug-failure.png
+          if-no-files-found: warn

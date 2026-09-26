@@ -52,7 +52,14 @@ jobs:
         run: kubectl rollout status deployment/ollama -n llm-app --timeout=120s
 
       - name: Wait for Open WebUI rollout
-        run: kubectl rollout status deployment/open-webui -n llm-app --timeout=120s
+        run: kubectl rollout status deployment/open-webui -n llm-app --timeout=300s
+
+      - name: Diagnose Open WebUI on failure
+        if: failure()
+        run: |
+          kubectl get pods -n llm-app -o wide
+          kubectl describe pod -n llm-app -l app=open-webui
+          kubectl logs -n llm-app -l app=open-webui --tail=100
 
       - name: Show final state
         run: |

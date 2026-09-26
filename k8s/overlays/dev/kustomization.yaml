@@ -7,6 +7,6 @@ resources:
   - ../../base
 
 patches:
-  - path: patch-resources.yaml
-
-images: []
+  - path: patch-ollama-resources.yaml
+  - path: patch-openwebui-resources.yaml
+  - path: patch-hpa.yaml

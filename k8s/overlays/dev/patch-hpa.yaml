@@ -1,0 +1,7 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: open-webui-hpa
+  namespace: llm-app
+spec:
+  maxReplicas: 2
